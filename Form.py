@@ -52,38 +52,26 @@ class ImageProcessingApp: #A class for Image Processing containing infomration a
 
 
     def setup_image_view(self):
+
         if self.current_view:
             self.current_view.destroy()
 
-        # Main frame
         self.current_view = CTkFrame(self.root)
-        self.current_view.pack(pady=22, padx=22, fill="both", expand=True)
+        self.current_view.pack(pady= 22, padx= 22, fill="both", expand=True)
 
-        # Header label
-        CTkLabel(self.current_view, text="Image Processing", font=("Calibri", 14, "bold")).pack(pady=10)
+        CTkLabel(self.current_view, text = "Image Processing",  font =("Calibri", 14, "bold")).pack(pady=10)
+     
+        buttons_frame = CTkFrame(self.current_view)  # Frame which holds the buttons
+        buttons_frame.pack(pady=10, anchor='w', padx=10)   
 
-        # Frame for buttons (uses grid layout)
-        buttons_frame = CTkFrame(self.current_view)  # Buttons placed inside this frame
-        buttons_frame.pack(pady=10, anchor='w', padx=10)
+        buttons = [("Upload", self.upload_image),("Grayscale", self.convert_to_grayscale,),("Image Blurring", self.image_blurring),("Detect Edges", self.detect_edges)]# Text, #Button
+        for text, command in buttons: 
+            tk.Button(buttons_frame, text = text, width = 15, height=2, command=command).pack(pady= 10) 
 
-        # Define buttons
-        buttons = [
-            ("Upload", self.upload_image),
-            ("Grayscale", self.convert_to_grayscale),
-            ("Image Blurring", self.image_blurring),
-            ("Detect Edges", self.detect_edges),
-        ]
-
-        # Add buttons horizontally using grid
-        for idx, (text, command) in enumerate(buttons):
-            CTkButton(
-                buttons_frame, text=text, width=120, height=32, command=command
-            ).grid(row=0, column=idx, padx=10)  # Place in grid layout
-
-        # Image label (uses pack layout)
-        self.img_label = tk.Label(self.current_view)  # A label for images
-        self.img_label.pack(pady=20)
-
+    
+        self.img_label = tk.Label(self.current_view) # A label for images in main menu
+        self.img_label.pack(pady=20) 
+    
     
     def upload_image(self): #Allows the user to upload the image 
         file_path = filedialog.askopenfilename( 
