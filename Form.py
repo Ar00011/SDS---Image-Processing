@@ -16,7 +16,7 @@ class ImageProcessingApp: #A class for Image Processing containing infomration a
         self.setup_form_view()
 
 
-    def setup_form_view(self): #sets up the labels for the buttons 
+    def setup_form_view(self):
         if self.current_view:
             self.current_view.destroy()
 
@@ -26,35 +26,53 @@ class ImageProcessingApp: #A class for Image Processing containing infomration a
         CTkLabel(self.current_view, text = "Photo Submission Form", font=("Calibri", 18, "bold")).pack(pady=10)
 
         CTkLabel(self.current_view, text= "Name of the photo: ").pack(pady= 6)
-        Name_photo_entry = CTkEntry(self.current_view, width= 450)
-        Name_photo_entry.pack()
+        self.Name_photo_entry = CTkEntry(self.current_view, width= 450, justify = "center")
+        self.Name_photo_entry.pack()
 
         CTkLabel(self.current_view, text = "Date Photo Captured" ).pack(pady = 6)
-        Date_photo_captured_entry = CTkEntry(self.current_view ,width= 450)
-        Date_photo_captured_entry.pack()
+        self.Date_photo_captured_entry = CTkEntry(self.current_view ,width= 450, justify = "center")
+        self.Date_photo_captured_entry.pack()
 
         CTkLabel(self.current_view,text="Date of submission").pack(pady=6)
-        Date_of_submission_entry = CTkEntry(self.current_view, width= 450)
-        Date_of_submission_entry.pack()
+        self.Date_of_submission_entry = CTkEntry(self.current_view, width= 450, justify = "center")
+        self.Date_of_submission_entry.pack()
 
         CTkLabel(self.current_view, text=" Photographer:").pack(pady= 6)
-        photographer_entry = CTkEntry(self.current_view, width= 450)
-        photographer_entry.pack()
+        self.photographer_entry = CTkEntry(self.current_view, width= 450, justify = "center")
+        self.photographer_entry.pack()
 
         CTkLabel(self.current_view,text= "Description of image:").pack(pady=6)
-        Description_of_image_entry = CTkEntry(self.current_view, width = 450)
-        Description_of_image_entry.pack()
+        self.Description_of_image_entry = CTkEntry(self.current_view, width = 450, height = 300, justify = "center")
+        self.Description_of_image_entry.pack()
 
         submit_button = CTkButton(self.current_view ,text="Submit Form", command= self.submit_form)
         submit_button.pack(pady=25)
 
     def submit_form(self):
+        errors  = self.check_input()
+
+        if errors:
+            messagebox.showerror("Form Error", "\n".join(errors))
+            return
 
         self.setup_image_view()
 
     def check_input(self):
-        pass
 
+        entries = [
+
+            self.Name_photo_entry,
+            self.Date_photo_captured_entry,
+            self.Date_of_submission_entry,
+            self.photographer_entry,
+            self.Description_of_image_entry,
+
+        ]
+
+        if any(not entry.get().strip() for entry in entries):
+            messagebox.showerror("Forms Error", "All fields are compulsory. Please fill out every field")
+            return True
+        return False
 
     def setup_image_view(self):
 
@@ -77,8 +95,9 @@ class ImageProcessingApp: #A class for Image Processing containing infomration a
         ]
 
         for index, (text, command) in enumerate (buttons): 
-            tk.Button(buttons_frame, text = text, width = 15, height=2, command=command).grid(row= 0, column=index, padx= 200) 
+            tk.Button(buttons_frame, text = text, width = 10, height=2, command=command).grid(row= 0, column=index, padx= 150) 
 
+    
         self.img_label = tk.Label(self.current_view) # A label for images in main menu
         self.img_label.pack(pady=20) 
     
