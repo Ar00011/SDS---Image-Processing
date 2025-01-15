@@ -1,5 +1,5 @@
 
-#Importsa essential libraries for the GUI
+#Imports essential libraries for the GUI and image processing
 
 from customtkinter import *
 import tkinter as tk                  
@@ -7,13 +7,14 @@ from tkinter import messagebox, filedialog #Alerts and dialogs
 from PIL import Image, ImageTk   #PIL allows image handling with TKinter
 import cv2 #Applied in image processing features such as image blurring and edge detection.
 import numpy as np # Custom widgets for modern UI
+from datetime import datetime
 
 
 class ImageProcessingApp: #A class for Image Processing containing infomration about the window.
     def __init__(self,root): 
         self.root = root 
-        self.root.geometry('700x800')  
-        self.root.title('Image Processing') 
+        self.root.geometry('950x950')  
+        self.root.title('Cool Image Processing') 
         #Placeholde for essential properties
         self.active_frame = None
         self.original_image = None
@@ -36,18 +37,19 @@ class ImageProcessingApp: #A class for Image Processing containing infomration a
         #Form title
         CTkLabel(self.active_frame, text = "Photo Submission Form", font=("Calibri", 18, "bold")).pack(pady=10)
 
-
         #Input fields created with their labels
         CTkLabel(self.active_frame, text= "Name of the photo: ").pack(pady= 6)
         self.Name_photo_entry = CTkEntry(self.active_frame, width= 450, justify = "center")
         self.Name_photo_entry.pack()
 
-        CTkLabel(self.active_frame, text = "Date Photo Captured" ).pack(pady = 6)
+        CTkLabel(self.active_frame, text = "Date Photo Captured - DD/MM/YYYY " ).pack(pady = 6)
         self.Date_photo_captured_entry = CTkEntry(self.active_frame ,width= 450, justify = "center")
+        self.Date_photo_captured_entry.bind("<KeyRelease>", lambda event: self.check_date_input(event.char, self.Date_photo_captured_entry))
         self.Date_photo_captured_entry.pack()
 
-        CTkLabel(self.active_frame,text="Date of submission").pack(pady=6)
+        CTkLabel(self.active_frame,text="Date of submission - DD/MM/YYYY").pack(pady=6)
         self.Date_of_submission_entry = CTkEntry(self.active_frame, width= 450, justify = "center")
+        self.Date_of_submission_entry.bind("<KeyRelease>", lambda event: self.check_date_input(event.char, self.Date_of_submission_entry))
         self.Date_of_submission_entry.pack()
 
         CTkLabel(self.active_frame, text=" Photographer:").pack(pady= 6)
@@ -55,15 +57,73 @@ class ImageProcessingApp: #A class for Image Processing containing infomration a
         self.photographer_entry.pack()
 
         CTkLabel(self.active_frame,text= "Description of image:").pack(pady=6)
-        self.Description_of_image_entry = CTkEntry(self.active_frame, width = 450, height = 300, justify = "center")
+        self.Description_of_image_entry = CTkTextbox(self.active_frame, width = 450, height = 300,fg_color="#333333", border_color= "#444444", border_width= 5)
         self.Description_of_image_entry.pack()
+        
+          #Word count label setting max words to 250
+        self.word_count_label = CTkLabel(self.active_frame, text="Word count: 0/250", font=("Calibri", 15))
+        self.word_count_label.pack(pady=2)
+
+        CTkLabel(self.active_frame, text = "Image Category", font= ("Calibri", 16)).pack(pady= 6)
+        self.categories_options = ["Urban", "Nature", "Landsape", "Portrait", "Abstract", "Wildlife"]
+        self.category_var = StringVar()
+        self.category_menu = CTkOptionMenu(self.active_frame, values = self.categories_options)
+        self.category_menu.pack(pady=6)
 
         submit_button = CTkButton(self.active_frame ,text="Submit Form", command= self.submit_form)
         submit_button.pack(pady=25)
+      
+        # As keys are pressed the word count is increased
+        self.Description_of_image_entry.bind("<KeyRelease>", self.update_word_count)
 
+    #Checks if 
+    def check_date_input(self, char, entry_widget):
+        if not (char.isdigit() or char == '/'): #Limited to only / and digits
+            current_text = entry_widget.get()
+            entry_widget.delete(len(current_text)-1, len(current_text))
+            return False
+
+        
+        current_text = entry_widget.get()
+        try:
+            if len(current_text) == 10: #Checks input when there is full data available
+                from datetime import datetime
+                inputed_date = datetime.strptime(current_text, "%d/%m/%Y")
+        
+                if inputed_date > datetime.now():
+                    entry_widget.delete(0, 'end')
+                    messagebox.showerror("Error","Date cannot be in the future")
+        except ValueError:
+            entry_widget.delete(0, 'end')
+            messagebox.showerror("Invalid date format")
+        return True
     
-    
-    
+
+        
+    def count_words(self, text):
+        return len(text.split()) #Returns number of words in the inputed text
+
+    def update_word_count(self, event=None):
+        # Text from description_box is retrieved
+        description_text = self.Description_of_image_entry.get("1.0", "end").strip()
+        word_count = self.count_words(description_text)
+
+        # Word count label is updated
+        self.word_count_label.configure(text=f"Word count: {word_count}/250")
+
+        # Stops if word count > 250
+        if word_count > 250:
+            #Removes last input after 250 was reached
+            self.Description_of_image_entry.delete("end-2c", "end")
+
+            self.word_count_label.configure(text="Word count: 250/250 (Limit Reached)")
+
+            messagebox.showerror("error", "Max limit of 250 words is reached")
+            return
+
+
+
+
     def submit_form(self):  # Inputs are validated, errors displayed and if successful then proceed
         errors = self.check_input()
         if errors:
@@ -81,9 +141,11 @@ class ImageProcessingApp: #A class for Image Processing containing infomration a
             errors.append("Please enter the date of submission")
         if not self.photographer_entry.get().strip():
             errors.append("Please enter the name of the photographer")
-        if not self.Description_of_image_entry.get().strip():
+        if not self.Description_of_image_entry.get("1.0", "end").strip():
             errors.append("Please enter a description for your image")
         return errors
+    
+
 
     #Form screen initialisation
     def setup_image_view(self):
@@ -95,7 +157,7 @@ class ImageProcessingApp: #A class for Image Processing containing infomration a
         self.active_frame = CTkFrame(self.root)
         self.active_frame.pack(pady= 22, padx= 22, fill="both", expand=True)
 
-        #Titlte and font set through a label
+        #Title and font set through a label
         CTkLabel(self.active_frame, text = "Image Processing",  font =("Calibri", 14, "bold")).pack(pady=10)
 
         # Frame which holds the buttons
@@ -113,8 +175,6 @@ class ImageProcessingApp: #A class for Image Processing containing infomration a
         #Save button personalised
         save_button = CTkButton(bottom_buttons_frame, text="Save", command=self.save_image, fg_color="#4CAF50", text_color="white")
         save_button.pack(side="left", padx=10)
-
-
 
          # Text and Functions for the buttons
         buttons = [
@@ -146,10 +206,11 @@ class ImageProcessingApp: #A class for Image Processing containing infomration a
 
 
     def reset_image(self):
+        #If no image attached then dsiplay error
         if not self.original_image:
             messagebox.showerror("Error", "No image attached. Please upload an image first")
             return
-
+        #Resets back the original image and resets filter
         if self.filter_applied:
             self.update_image(self.original_image)
             self.filter_applied = False
@@ -178,7 +239,8 @@ class ImageProcessingApp: #A class for Image Processing containing infomration a
         self.tkImg = ImageTk.PhotoImage(img) 
         self.img_label.config(image=self.tkImg)  
     
-    def convert_to_grayscale(self): # Converts into grayscale
+    # Converts into grayscale
+    def convert_to_grayscale(self): 
         if self.original_image: 
             gray_image = self.image.convert("L") 
             self.update_image(gray_image) 
@@ -212,9 +274,6 @@ class ImageProcessingApp: #A class for Image Processing containing infomration a
             self.filter_applied = True # Mark filter as applied
         else:
             messagebox.showerror("Error", "No image loaded")
-
-
-
 
 if __name__ == '__main__':
     root = tk.Tk() 
