@@ -1,284 +1,271 @@
+# Imports essential libraries for the GUI and image processing
 
-#Imports essential libraries for the GUI and image processing
-
+#GUI
 from customtkinter import *
-import tkinter as tk                  
-from tkinter import messagebox, filedialog #Alerts and dialogs
-from PIL import Image, ImageTk   #PIL allows image handling with TKinter
-import cv2 #Applied in image processing features such as image blurring and edge detection.
-import numpy as np # Custom widgets for modern UI
-from datetime import datetime
+import tkinter as tk
+from tkinter import messagebox, filedialog  # Alerts and dialogs
+from PIL import Image, ImageTk  # PIL allows image handling with TKinter
+
+import cv2  # Applied in image processing features such as image blurring and edge detection.
+
+import numpy as np  #Array manipulation and OpenCV
 
 
-class ImageProcessingApp: #A class for Image Processing containing infomration about the window.
-    def __init__(self,root): 
-        self.root = root 
-        self.root.geometry('950x950')  
-        self.root.title('Cool Image Processing') 
-        #Placeholde for essential properties
-        self.active_frame = None
-        self.original_image = None
+
+class ImageProcessingApp:  # A class for Image Processing containing information about the window.
+    def __init__(self, root):
+        # Main window is initialised
+        self.root = root
+        self.root.geometry('950x950')
+        self.root.title('Cool Image Processing')
+        # Placeholders for image processing
+        self.activeFrame = None
+        self.originalImage = None
         self.image = None
+        self.filterApplied = False  # Flag, tracks if filter applied to an image.
 
-        self.filter_applied = False # Boolean initialised, tracking filters.
+        # Starts the form view
+        self.setupFormView()
 
-        self.setup_form_view()
+    def setupFormView(self):
+        # If an old frame exists, clear it
+        if self.activeFrame:
+            self.activeFrame.destroy()
 
-    #Form screen setup
-    def setup_form_view(self):
-        #if a old frame exists, clear it
-        if self.active_frame:
-            self.active_frame.destroy()
+        # Creates a new frame for the form
+        self.activeFrame = CTkFrame(self.root)
+        self.activeFrame.pack(pady=22, padx=22, fill="both", expand=True)
 
-        #Creates a new frame
-        self.active_frame = CTkFrame(self.root)
-        self.active_frame.pack(pady = 22, padx = 22, fill= "both", expand = True)
+        # Form title
+        CTkLabel(self.activeFrame, text="Photo Submission Form", font=("Calibri", 18, "bold")).pack(pady=10)
 
-        #Form title
-        CTkLabel(self.active_frame, text = "Photo Submission Form", font=("Calibri", 18, "bold")).pack(pady=10)
+        # Input fields created with their labels
+        CTkLabel(self.activeFrame, text="Name of the photo: ").pack(pady=6)
+        self.namePhotoEntry = CTkEntry(self.activeFrame, width=450, justify="center")
+        self.namePhotoEntry.pack()
 
-        #Input fields created with their labels
-        CTkLabel(self.active_frame, text= "Name of the photo: ").pack(pady= 6)
-        self.Name_photo_entry = CTkEntry(self.active_frame, width= 450, justify = "center")
-        self.Name_photo_entry.pack()
+        CTkLabel(self.activeFrame, text="Date Photo Captured - DD/MM/YYYY ").pack(pady=6)
+        self.datePhotoCapturedEntry = CTkEntry(self.activeFrame, width=450, justify="center")
+        self.datePhotoCapturedEntry.bind("<KeyRelease>", lambda event: self.checkDateInput(event.char, self.datePhotoCapturedEntry))
+        self.datePhotoCapturedEntry.pack()
 
-        CTkLabel(self.active_frame, text = "Date Photo Captured - DD/MM/YYYY " ).pack(pady = 6)
-        self.Date_photo_captured_entry = CTkEntry(self.active_frame ,width= 450, justify = "center")
-        self.Date_photo_captured_entry.bind("<KeyRelease>", lambda event: self.check_date_input(event.char, self.Date_photo_captured_entry))
-        self.Date_photo_captured_entry.pack()
+        CTkLabel(self.activeFrame, text="Date of submission - DD/MM/YYYY").pack(pady=6)
+        self.dateOfSubmissionEntry = CTkEntry(self.activeFrame, width=450, justify="center")
+        self.dateOfSubmissionEntry.bind("<KeyRelease>", lambda event: self.checkDateInput(event.char, self.dateOfSubmissionEntry))
+        self.dateOfSubmissionEntry.pack()
 
-        CTkLabel(self.active_frame,text="Date of submission - DD/MM/YYYY").pack(pady=6)
-        self.Date_of_submission_entry = CTkEntry(self.active_frame, width= 450, justify = "center")
-        self.Date_of_submission_entry.bind("<KeyRelease>", lambda event: self.check_date_input(event.char, self.Date_of_submission_entry))
-        self.Date_of_submission_entry.pack()
+        CTkLabel(self.activeFrame, text="Photographer:").pack(pady=6)
+        self.photographerEntry = CTkEntry(self.activeFrame, width=450, justify="center")
+        self.photographerEntry.pack()
 
-        CTkLabel(self.active_frame, text=" Photographer:").pack(pady= 6)
-        self.photographer_entry = CTkEntry(self.active_frame, width= 450, justify = "center")
-        self.photographer_entry.pack()
+        CTkLabel(self.activeFrame, text="Description of image:").pack(pady=6)
+        self.descriptionOfImageEntry = CTkTextbox(self.activeFrame, width=450, height=300, fg_color="#333333", border_color="#444444", border_width=5)
+        self.descriptionOfImageEntry.pack()
 
-        CTkLabel(self.active_frame,text= "Description of image:").pack(pady=6)
-        self.Description_of_image_entry = CTkTextbox(self.active_frame, width = 450, height = 300,fg_color="#333333", border_color= "#444444", border_width= 5)
-        self.Description_of_image_entry.pack()
-        
-          #Word count label setting max words to 250
-        self.word_count_label = CTkLabel(self.active_frame, text="Word count: 0/250", font=("Calibri", 15))
-        self.word_count_label.pack(pady=2)
+        self.wordCountLabel = CTkLabel(self.activeFrame, text="Word count: 0/250", font=("Calibri", 15))
+        self.wordCountLabel.pack(pady=2)
 
-        CTkLabel(self.active_frame, text = "Image Category", font= ("Calibri", 16)).pack(pady= 6)
-        self.categories_options = ["Urban", "Nature", "Landsape", "Portrait", "Abstract", "Wildlife"]
-        self.category_var = StringVar()
-        self.category_menu = CTkOptionMenu(self.active_frame, values = self.categories_options)
-        self.category_menu.pack(pady=6)
+        # As keys are pressed, the word count is increased
+        self.descriptionOfImageEntry.bind("<KeyRelease>", self.updateWordCount)
 
-        submit_button = CTkButton(self.active_frame ,text="Submit Form", command= self.submit_form)
-        submit_button.pack(pady=25)
-      
-        # As keys are pressed the word count is increased
-        self.Description_of_image_entry.bind("<KeyRelease>", self.update_word_count)
+        # Selection box for categories
+        CTkLabel(self.activeFrame, text="Image Category", font=("Calibri", 16)).pack(pady=6)
+        self.categoriesOptions = ["Urban", "Nature", "Landscape", "Portrait", "Abstract", "Wildlife"] #Options in the selection box
+        self.categoryMenu = CTkOptionMenu(self.activeFrame, values=self.categoriesOptions) #Selection box
+        self.categoryMenu.pack(pady=6)
 
-    #Checks if 
-    def check_date_input(self, char, entry_widget):
-        if not (char.isdigit() or char == '/'): #Limited to only / and digits
-            current_text = entry_widget.get()
-            entry_widget.delete(len(current_text)-1, len(current_text))
+        submitButton = CTkButton(self.activeFrame, text="Submit Form", command=self.submitForm)
+        submitButton.pack(pady=25)
+
+    def checkDateInput(self, char, entryWidget):
+        if not (char.isdigit() or char == '/'):  # Limited to only / and digits
+            currentText = entryWidget.get()
+            entryWidget.delete(len(currentText) - 1, len(currentText))
             return False
 
-        
-        current_text = entry_widget.get()
+        currentText = entryWidget.get() # Get text inputted again from the entry
         try:
-            if len(current_text) == 10: #Checks input when there is full data available
+            if len(currentText) == 10: # Checks input when there is full date length available
                 from datetime import datetime
-                inputed_date = datetime.strptime(current_text, "%d/%m/%Y")
-        
-                if inputed_date > datetime.now():
-                    entry_widget.delete(0, 'end')
-                    messagebox.showerror("Error","Date cannot be in the future")
+                inputedDate = datetime.strptime(currentText, "%d/%m/%Y")
+
+                if inputedDate > datetime.now(): 
+                    entryWidget.delete(0, 'end') # Deletes all of the characters
+                    messagebox.showerror("", "Date cannot be in the future")
+
         except ValueError:
-            entry_widget.delete(0, 'end')
-            messagebox.showerror("Invalid date format")
+            entryWidget.delete(0, 'end')
+            messagebox.showerror("Error","Invalid date format, Please enter in format DD/MM/YYYY")
         return True
-    
 
-        
-    def count_words(self, text):
-        return len(text.split()) #Returns number of words in the inputed text
+    def countWords(self, text):
+        return len(text.split())  # Returns number of words in the input text
 
-    def update_word_count(self, event=None):
-        # Text from description_box is retrieved
-        description_text = self.Description_of_image_entry.get("1.0", "end").strip()
-        word_count = self.count_words(description_text)
+    def updateWordCount(self, event=None):
+        # Text from description_box is updated
+        descriptionText = self.descriptionOfImageEntry.get("1.0", "end").strip()
+        wordCount = self.countWords(descriptionText)
 
         # Word count label is updated
-        self.word_count_label.configure(text=f"Word count: {word_count}/250")
+        self.wordCountLabel.configure(text=f"Word count: {wordCount}/250")
 
-        # Stops if word count > 250
-        if word_count > 250:
-            #Removes last input after 250 was reached
-            self.Description_of_image_entry.delete("end-2c", "end")
+        # Checks if word count > 250
+        if wordCount > 250:
+            # Removes last input after 250 was reached
+            self.descriptionOfImageEntry.delete("end-2c", "end")
 
-            self.word_count_label.configure(text="Word count: 250/250 (Limit Reached)")
+            self.wordCountLabel.configure(text="Word count: 250/250 (Limit Reached)")
 
-            messagebox.showerror("error", "Max limit of 250 words is reached")
+            messagebox.showerror("Error", "Max limit of 250 words is reached")
             return
 
-
-
-
-    def submit_form(self):  # Inputs are validated, errors displayed and if successful then proceed
-        errors = self.check_input()
+    def submitForm(self):  # Inputs are validated, errors displayed and if successful then proceed
+        errors = self.checkInput()
         if errors:
             messagebox.showerror("Form Error", errors[0])
         else:
-            self.setup_image_view()
+            self.setupImageView()
 
-    def check_input(self):  # Form inputs are verified
+    def checkInput(self):  # Checks if a field is left empty
         errors = []
-        if not self.Name_photo_entry.get().strip():
+        if not self.namePhotoEntry.get().strip():
             errors.append("Please enter the name of the photo")
-        if not self.Date_photo_captured_entry.get().strip():
+        if not self.datePhotoCapturedEntry.get().strip():
             errors.append("Please enter the date the photo was captured")
-        if not self.Date_of_submission_entry.get().strip():
+        if not self.dateOfSubmissionEntry.get().strip():
             errors.append("Please enter the date of submission")
-        if not self.photographer_entry.get().strip():
+        if not self.photographerEntry.get().strip():
             errors.append("Please enter the name of the photographer")
-        if not self.Description_of_image_entry.get("1.0", "end").strip():
+        if not self.descriptionOfImageEntry.get("1.0", "end").strip():
             errors.append("Please enter a description for your image")
         return errors
-    
 
+    # Form screen initialisation
+    def setupImageView(self):
+        # If older frame exists, delete it
+        if self.activeFrame:
+            self.activeFrame.destroy()
 
-    #Form screen initialisation
-    def setup_image_view(self):
-        #if older frame exists, delete it
-        if self.active_frame:
-            self.active_frame.destroy()
+        # Creates a new frame
+        self.activeFrame = CTkFrame(self.root)
+        self.activeFrame.pack(pady=22, padx=22, fill="both", expand=True)
+
+        # Title and font set through a label
+        CTkLabel(self.activeFrame, text="Image Processing", font=("Calibri", 14, "bold")).pack(pady=10)
+
+        # Frame which holds the top buttons
+        buttonsFrame = CTkFrame(self.activeFrame)
+        buttonsFrame.pack(pady=10, padx=10, anchor='center')
+
+        # Frame positioned lower, for reset and save buttons
+        bottomButtonsFrame = CTkFrame(self.activeFrame)
+        bottomButtonsFrame.pack(pady=10)
         
-        #Creates a new frame
-        self.active_frame = CTkFrame(self.root)
-        self.active_frame.pack(pady= 22, padx= 22, fill="both", expand=True)
-
-        #Title and font set through a label
-        CTkLabel(self.active_frame, text = "Image Processing",  font =("Calibri", 14, "bold")).pack(pady=10)
-
-        # Frame which holds the buttons
-        buttons_frame = CTkFrame(self.active_frame)  
-        buttons_frame.pack(pady=10, padx=10, anchor='center')  
+        resetButton = CTkButton(bottomButtonsFrame, text="Reset", command=self.resetImage, fg_color="#FF0000", text_color="white")
+        resetButton.pack(side="left", padx=10)
         
-        #Frame positioned lower to initial, for reset and save buttons
-        bottom_buttons_frame = CTkFrame(self.active_frame) 
-        bottom_buttons_frame.pack(pady=10)
+        saveButton = CTkButton(bottomButtonsFrame, text="Save", command=self.saveImage, fg_color="#4CAF50", text_color="white")
+        saveButton.pack(side="left", padx=10)
 
-        #Reset button personalised
-        reset_button = CTkButton(bottom_buttons_frame, text="Reset", command=self.reset_image,fg_color="#FF0000", text_color="white")
-        reset_button.pack(side="left", padx=10)
-        
-        #Save button personalised
-        save_button = CTkButton(bottom_buttons_frame, text="Save", command=self.save_image, fg_color="#4CAF50", text_color="white")
-        save_button.pack(side="left", padx=10)
-
-         # Text and Functions for the buttons
+        # Text and Functions for the buttons
         buttons = [
-        ("Upload", self.upload_image),
-        ("Grayscale", self.convert_to_grayscale),
-        ("Image Blurring", self.image_blurring),
-        ("Detect Edges", self.detect_edges),
+            ("Upload", self.uploadImage),
+            ("Grayscale", self.convertToGrayscale),
+            ("Image Blurring", self.imageBlurring),
+            ("Detect Edges", self.detectEdges),
         ]
+        #Loop through each button's text and command, whilst tracking the index
+        for index, (text, command) in enumerate(buttons):
+            CTkButton(buttonsFrame, text=text, width=120, height=40, command=command).grid(row=0, column=index, padx=120)
 
-        for index, (text, command) in enumerate (buttons): 
-            CTkButton(buttons_frame, text = text, width = 120, height=40, command=command).grid(row= 0, column=index, padx= 120) 
+        # Displays the transformed image in the label 
+        self.imgLabel = tk.Label(self.activeFrame)  # A label for images in main menu
+        self.imgLabel.pack(pady=20)
 
-        #Label to display the picture
-        self.img_label = tk.Label(self.active_frame) # A label for images in main menu
-        self.img_label.pack(pady=20) 
-    
-    def save_image(self):
-        #Current picture can get saved by the user
+    def saveImage(self):
+        # Current picture can get saved by the user
         if self.image:
-            file_path = filedialog.asksaveasfilename(
+            filePath = filedialog.asksaveasfilename(
                 defaultextension=".png",
                 filetypes=[("PNG files", "*.png"), ("JPEG files", "*.jpg"), ("All files", "*.*")]
             )
-            if file_path:
-                self.image.save(file_path)
+            if filePath:
+                self.image.save(filePath)
                 messagebox.showinfo("Success", "Image saved successfully!")
         else:
-            messagebox.showerror("Error", "No image to save")
+            messagebox.showerror("Error", "No image to save. Please upload an image.")
 
-
-    def reset_image(self):
-        #If no image attached then dsiplay error
-        if not self.original_image:
+    def resetImage(self):
+        # If no image attached, then display error
+        if not self.originalImage:
             messagebox.showerror("Error", "No image attached. Please upload an image first")
             return
-        #Resets back the original image and resets filter
-        if self.filter_applied:
-            self.update_image(self.original_image)
-            self.filter_applied = False
+        # Resets back the original image and resets filter
+        if self.filterApplied:
+            self.updateImage(self.originalImage)
+            self.filterApplied = False
             messagebox.showinfo("Success", "Picture has been reset to original")
         else:
             messagebox.showinfo("Info", "No filters to reset, it is already original")
-                
-    #Allows certain types of images to be uploaded
-    def upload_image(self): 
-        #Gives the user a choice to pick an image to upload
-        file_path = filedialog.askopenfilename( 
-            title = "Choose an image", 
-            filetypes=[("Image files", "*.jpeg;*.jpg;*.png;*.bmp")] 
-        )
-        if not file_path: 
-            return # Exits
-        try: 
-            self.original_image = Image.open(file_path) #Opens the image file
-            self.image = self.original_image.copy()
-            self.display_image(self.image) 
-        except Exception as e: 
-            messagebox.showerror("Error", f"Could not load the image: {e}") 
 
-    #Places the image inside the label
-    def display_image(self, img): 
-        self.tkImg = ImageTk.PhotoImage(img) 
-        self.img_label.config(image=self.tkImg)  
-    
-    # Converts into grayscale
-    def convert_to_grayscale(self): 
-        if self.original_image: 
-            gray_image = self.image.convert("L") 
-            self.update_image(gray_image) 
-            self.filter_applied = True # Mark filter as applied
+    # Allows certain types of formats of images to be uploaded
+    def uploadImage(self):
+        filePath = filedialog.askopenfilename(
+            title="Choose an image", 
+            filetypes=[("Image files", "*.jpeg;*.jpg;*.png;*.bmp")] #Supported image formats
+        )
+        if not filePath:
+            return  # Exits
+        try:
+            self.originalImage = Image.open(filePath)  # Opens the image file
+            self.image = self.originalImage.copy()
+            self.displayImage(self.image)
+        except Exception as e:
+            messagebox.showerror("Error", f"Could not load the image: {e}")
+
+    # Places the image inside the label
+    def displayImage(self, img):
+        self.tkImg = ImageTk.PhotoImage(img)
+        self.imgLabel.config(image=self.tkImg)
+
+  
+    def convertToGrayscale(self):
+        if self.originalImage:
+            grayImage = self.image.convert("L") # Applies grayscale into current image
+            self.updateImage(grayImage) 
+            self.filterApplied = True  # Mark filter as applied
         else:
-            messagebox.showerror("Error", "No image uploaded") 
+            messagebox.showerror("Error", "No image uploaded")
 
     # Updates the current image on display
-    def update_image(self,new_image): 
-        self.image = new_image 
-        self.display_image(new_image) 
+    def updateImage(self, newImage):
+        self.image = newImage
+        self.displayImage(newImage)
 
-    # Applies Gaussian blur to loaded image using Pillow
-    def image_blurring(self): 
-        if self.original_image: 
-            opencv_picture = cv2.cvtColor(np.array(self.image), cv2.COLOR_RGB2BGR) 
-            blurred_img = cv2.GaussianBlur(opencv_picture, (15,15),0) 
-            blurred_img_pil = Image.fromarray(cv2.cvtColor(blurred_img, cv2.COLOR_BGR2RGB)) 
-            self.update_image(blurred_img_pil) 
-            self.filter_applied = True # Mark filter as applied
-        else:
-            messagebox.showerror("Error", "No image loaded") 
-
-    #Detects edges in loaded image
-    def detect_edges(self): 
-        if self.original_image: 
-            opencv_picture = cv2.cvtColor(np.array(self.image), cv2.COLOR_RGB2BGR) 
-            edge_detection = cv2.Canny(opencv_picture, 100,200) 
-            edges_pil = Image.fromarray(edge_detection) 
-            self.update_image(edges_pil) 
-            self.filter_applied = True # Mark filter as applied
+    # Applies Gaussian blur to loaded image using OpenCV and Pillow
+    def imageBlurring(self):
+        if self.originalImage:
+            opencvPicture = cv2.cvtColor(np.array(self.image), cv2.COLOR_RGB2BGR) #Converts the Image from Pillow to OpenCV
+            blurredImg = cv2.GaussianBlur(opencvPicture, (15, 15), 0) # Applies Gaussian Blur
+            blurredImgPil = Image.fromarray(cv2.cvtColor(blurredImg, cv2.COLOR_BGR2RGB)) #Convert back to Pillow format
+            self.updateImage(blurredImgPil)
+            self.filterApplied = True  # Mark filter as applied
         else:
             messagebox.showerror("Error", "No image loaded")
 
+    # Detects edges in the loaded image
+    def detectEdges(self):
+        if self.originalImage:
+            opencvPicture = cv2.cvtColor(np.array(self.image), cv2.COLOR_RGB2BGR)
+            edgeDetection = cv2.Canny(opencvPicture, 100, 200)
+            edgesPil = Image.fromarray(edgeDetection)
+            self.updateImage(edgesPil)
+            self.filterApplied = True  # Mark filter as applied
+        else:
+            messagebox.showerror("Error", "No image loaded")
+
+
 if __name__ == '__main__':
-    root = tk.Tk() 
+    root = tk.Tk()
     application = ImageProcessingApp(root)
-    root.mainloop() 
-
-
-        
+    root.mainloop()
